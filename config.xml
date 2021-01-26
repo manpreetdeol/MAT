@@ -1,0 +1,78 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>podName</name>
+          <description></description>
+          <defaultValue>accstorefront-6b997778f9-rp655</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>dumpPath</name>
+          <description></description>
+          <defaultValue>/var/lib/dynatrace/oneagent/datastorage/memorydump/20210126020154_1/</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <scm class="hudson.plugins.git.GitSCM" plugin="git@4.5.2">
+    <configVersion>2</configVersion>
+    <userRemoteConfigs>
+      <hudson.plugins.git.UserRemoteConfig>
+        <url>https://github.com/manpreetdeol/MAT</url>
+      </hudson.plugins.git.UserRemoteConfig>
+    </userRemoteConfigs>
+    <branches>
+      <hudson.plugins.git.BranchSpec>
+        <name>*/master</name>
+      </hudson.plugins.git.BranchSpec>
+    </branches>
+    <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+    <submoduleCfg class="list"/>
+    <extensions/>
+  </scm>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.BatchFile>
+      <command>set&#xd;
+rem tar -xf MemoryAnalyzer-1.11.0.20201202-win32.win32.x86_64.zip --directory %WORKSPACE%&#xd;
+&#xd;
+mkdir %WORKSPACE%\heapdumps&#xd;
+&#xd;
+set fileName=dump.hprof.tar.gz&#xd;
+echo %fileName%&#xd;
+&#xd;
+if %ERRORLEVEL% EQU 0  echo DUMP FILE COMPRESSION STARTED&#xd;
+kubectl exec %podName% -- tar -czvf %dumpPath%%fileName% %dumpPath%dump.hprof&#xd;
+if %ERRORLEVEL% EQU 0  echo DUMP FILE COMPRESSION COMPLETE&#xd;
+&#xd;
+if %ERRORLEVEL% EQU 0  echo COPYING DUMP FILE&#xd;
+kubectl cp %podName%:%dumpPath%%fileName% heapdumps\%fileName%&#xd;
+if %ERRORLEVEL% EQU 0  echo DUMP FILE COPIED SUCCESSFULLY TO LOCAL SERVER&#xd;
+&#xd;
+if %ERRORLEVEL% EQU 0 echo DUMP FILE DECOMPRESSION STARTED&#xd;
+tar -xzvf ./heapdumps/%fileName% -C ./heapdumps/ --strip-components 7&#xd;
+if %ERRORLEVEL% EQU 0  echo DUMP FILE DECOMPRESSION COMPLETE&#xd;
+</command>
+      <configuredLocalRules/>
+    </hudson.tasks.BatchFile>
+  </builders>
+  <publishers/>
+  <buildWrappers>
+    <org.csanchez.jenkins.plugins.kubernetes.KubectlBuildWrapper plugin="kubernetes@1.28.6">
+      <serverUrl></serverUrl>
+      <credentialsId>mykubeconfig</credentialsId>
+    </org.csanchez.jenkins.plugins.kubernetes.KubectlBuildWrapper>
+  </buildWrappers>
+</project>
